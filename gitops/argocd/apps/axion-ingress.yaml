@@ -7,8 +7,13 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - axion.santansre.shop
+    secretName: axion-tls
   rules:
     - host: axion.santansre.shop
       http:
