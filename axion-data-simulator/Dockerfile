@@ -18,17 +18,13 @@ FROM python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Non-root user
-RUN addgroup --system --gid 1001 app && \
-    adduser --system --uid 1001 --ingroup app app
-
 WORKDIR /app
 
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
-COPY --chown=app:app simulator.py ./
+COPY --chown=1001:1001 simulator.py ./
 
-USER app
+USER 1001
 
 CMD ["python", "-u", "simulator.py"]

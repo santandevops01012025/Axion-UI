@@ -132,6 +132,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: 1
+          trivyignores: ${{ matrix.context }}/.trivyignore
 
       - name: Upload Trivy SARIF to GitHub Security
         if: always()
