@@ -1,0 +1,103 @@
+version: "3.9"
+
+# One-command local run of the entire Axion stack.
+#   docker compose up --build
+# The database runs as a Docker image (postgres:16-alpine) and the schema
+# is applied on first boot via the axion-database-schema image.
+#
+# Service names are kept identical to the Kubernetes Service names so the
+# in-app defaults (nginx /api proxy, simulator API_URL) work unchanged.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: axion-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-axion_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-P@ssw01rd@123}
+      POSTGRES_DB: ${POSTGRES_DB:-axion_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-axion_user} -d ${POSTGRES_DB:-axion_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot: apply the validated schema (psql from the schema image)
+  axion-database-schema:
+    build: ./axion-database-schema
+    image: axion-database-schema:latest
+    container_name: axion-schema-init
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["psql"]
+    command:
+      - "$(DATABASE_URL)"
+      - "-v"
+      - "ON_ERROR_STOP=1"
+      - "-f"
+      - "/docker-entrypoint-initdb.d/01-extensions.sql"
+      - "-f"
+      - "/docker-entrypoint-initdb.d/02-telemetry.sql"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-axion_user}:${POSTGRES_DB_ENCODED_PASSWORD:-P%40ssw01rd%40123}@db:5432/${POSTGRES_DB:-axion_db}
+
+  axion-telemetry-query-service:
+    build: ./axion-telemetry-query-service
+    image: axion-telemetry-query-service:latest
+    container_name: axion-telemetry-query
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-axion_user}:${POSTGRES_DB_ENCODED_PASSWORD:-P%40ssw01rd%40123}@db:5432/${POSTGRES_DB:-axion_db}
+    ports:
+      - "${QUERY_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      axion-database-schema:
+        condition: service_completed_successfully
+
+  axion-ingestion-service:
+    build: ./axion-ingestion-service
+    image: axion-ingestion-service:latest
+    container_name: axion-ingestion
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-axion_user}:${POSTGRES_DB_ENCODED_PASSWORD:-P%40ssw01rd%40123}@db:5432/${POSTGRES_DB:-axion_db}
+    ports:
+      - "${INGESTION_PORT:-8001}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      axion-database-schema:
+        condition: service_completed_successfully
+
+  axion-data-simulator:
+    build: ./axion-data-simulator
+    image: axion-data-simulator:latest
+    container_name: axion-data-simulator
+    restart: unless-stopped
+    environment:
+      API_URL: http://axion-ingestion-service:8000/api/v1/telemetry/ingest
+      INTERVAL_SECONDS: ${SIMULATOR_INTERVAL_SECONDS:-5}
+    depends_on:
+      - axion-ingestion-service
+
+  axion-ui:
+    build: ./axion-ui
+    image: axion-ui:latest
+    container_name: axion-ui
+    restart: unless-stopped
+    ports:
+      - "${UI_PORT:-8080}:80"
+    depends_on:
+      - axion-telemetry-query-service
+
+volumes:
+  db_data:

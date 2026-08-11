@@ -1,0 +1,14 @@
+apiVersion: v2
+name: axion-postgres
+description: PostgreSQL 16 StatefulSet for the Axion platform, seeded from the axion-database-schema image
+type: application
+version: 0.1.0
+appVersion: "16"
+
+keywords:
+  - axion
+  - postgres
+  - database
+maintainers:
+  - name: DevopsInsiders
+    email: devops@devopsinsiders.io

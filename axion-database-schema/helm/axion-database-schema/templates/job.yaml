@@ -1,0 +1,40 @@
+# One-shot migration Job: applies the validated schema to the target database.
+# In the default axion-gitops flow the schema is also loaded natively by the
+# Postgres StatefulSet initContainer; this Job is the standalone alternative.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "schema.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "schema.name" . }}
+spec:
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["psql"]
+          args:
+            - "$(DATABASE_URL)"
+            - "-v"
+            - "ON_ERROR_STOP=1"
+            - "-f"
+            - "/docker-entrypoint-initdb.d/01-extensions.sql"
+            - "-f"
+            - "/docker-entrypoint-initdb.d/02-telemetry.sql"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dbSecret.name }}
+                  key: {{ .Values.dbSecret.key }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: axion-database-schema
+  namespace: axion
+  labels:
+    app: axion-database-schema
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ghcr.io/devopsinsiders/axion-database-schema:latest
+          imagePullPolicy: IfNotPresent
+          command: ["psql"]
+          args:
+            - "$(DATABASE_URL)"
+            - "-v"
+            - "ON_ERROR_STOP=1"
+            - "-f"
+            - "/docker-entrypoint-initdb.d/01-extensions.sql"
+            - "-f"
+            - "/docker-entrypoint-initdb.d/02-telemetry.sql"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: axion-db-credentials
+                  key: DATABASE_URL

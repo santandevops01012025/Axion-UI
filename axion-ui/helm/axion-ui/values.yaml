@@ -1,0 +1,47 @@
+# Default values for axion-ui.
+# This is a YAML-formatted file. Declare variables to be passed into templates.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/devopsinsiders/axion-ui
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []  # e.g. ["ghcr-pull"] if the cluster needs a token to pull GHCR
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Downstream service the Nginx reverse proxy forwards /api/ to.
+apiUpstream:
+  host: axion-telemetry-query-service
+  port: 8000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podAnnotations: {}
+
+imagePullSecrets: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

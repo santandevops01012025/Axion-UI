@@ -1,0 +1,25 @@
+# App-of-apps: a single parent Application that instantiates every other
+# Application in argocd/apps/. Sync this file once; Argo CD manages the rest.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: axion-app-of-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: axion
+  source:
+    repoURL: https://github.com/santandevops01012025/Axion-UI.git
+    path: gitops/argocd/apps
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,4 @@
+# Trivy exclusions - reviewed & signed off by DevOps/AppSec.
+# Format: <CVE-ID> [expiry:YYYY-MM-DD] [comment]
+# Remove entries when a fix is available or expiry passes.
+# AVX-ID-0000-0000 expiry:2026-12-31 example entry

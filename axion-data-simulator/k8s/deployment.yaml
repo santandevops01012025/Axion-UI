@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axion-data-simulator
+  namespace: axion
+  labels:
+    app: axion-data-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: axion-data-simulator
+  template:
+    metadata:
+      labels:
+        app: axion-data-simulator
+    spec:
+      containers:
+        - name: axion-data-simulator
+          image: ghcr.io/devopsinsiders/axion-data-simulator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: API_URL
+              value: http://axion-ingestion-service:8000/api/v1/telemetry/ingest
+            - name: INTERVAL_SECONDS
+              value: "5"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

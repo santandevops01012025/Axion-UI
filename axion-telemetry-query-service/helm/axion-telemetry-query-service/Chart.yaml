@@ -1,0 +1,15 @@
+apiVersion: v2
+name: axion-telemetry-query-service
+description: Axion telemetry query API (FastAPI)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - axion
+  - telemetry
+  - query
+  - fastapi
+maintainers:
+  - name: DevopsInsiders
+    email: devops@devopsinsiders.io

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: axion
+  namespace: argocd
+spec:
+  description: Axion platform
+  # Allow all devopsinsiders repositories (tighten with explicit lists for prod)
+  sourceRepos:
+    - "https://github.com/devopsinsiders/*"
+    - "https://github.com/devopsinsiders/*.git"
+  destinations:
+    - namespace: axion
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: PersistentVolumeClaim
+  roles:
+    - name: read-only
+      description: Read access for auditors
+      policies:
+        - p, proj:axion:read-only, applications, get, axion/*, allow
+      groups:
+        - axion-auditors

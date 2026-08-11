@@ -1,0 +1,11 @@
+.env
+.git
+.github
+helm
+k8s
+sonar-project.properties
+.trivyignore
+Dockerfile
+.dockerignore
+*.md
+*.sql.tmpl

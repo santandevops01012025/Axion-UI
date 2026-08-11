@@ -1,0 +1,15 @@
+apiVersion: v2
+name: axion-data-simulator
+description: Axion telemetry data simulator (Python worker)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - axion
+  - telemetry
+  - simulator
+  - worker
+maintainers:
+  - name: DevopsInsiders
+    email: devops@devopsinsiders.io

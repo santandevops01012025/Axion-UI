@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: axion-ingestion-service
+  namespace: axion
+  labels:
+    app: axion-ingestion-service
+spec:
+  type: ClusterIP
+  selector:
+    app: axion-ingestion-service
+  ports:
+    - port: 8000
+      targetPort: http
+      name: http

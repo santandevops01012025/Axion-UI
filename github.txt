@@ -1,0 +1,9 @@
+https://github.com/devopsinsiders/axion-ui
+
+https://github.com/devopsinsiders/axion-telemetry-query-service
+
+https://github.com/devopsinsiders/axion-ingestion-service
+
+https://github.com/devopsinsiders/axion-data-simulator
+
+https://github.com/devopsinsiders/axion-database-schema 

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axion-telemetry-query-service
+  namespace: axion
+  labels:
+    app: axion-telemetry-query-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: axion-telemetry-query-service
+  template:
+    metadata:
+      labels:
+        app: axion-telemetry-query-service
+    spec:
+      containers:
+        - name: axion-telemetry-query-service
+          image: ghcr.io/devopsinsiders/axion-telemetry-query-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: axion-db-credentials
+                  key: DATABASE_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: axion-ui
+  namespace: axion
+  labels:
+    app: axion-ui
+spec:
+  type: ClusterIP
+  selector:
+    app: axion-ui
+  ports:
+    - port: 80
+      targetPort: http
+      name: http

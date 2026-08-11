@@ -1,0 +1,13 @@
+node_modules
+dist
+.vite
+.env
+.git
+.github
+helm
+k8s
+sonar-project.properties
+.trivyignore
+Dockerfile
+.dockerignore
+*.md

@@ -1,0 +1,30 @@
+image:
+  repository: ghcr.io/devopsinsiders/axion-database-schema
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Target database the migration Job applies to.
+dbSecret:
+  name: axion-db-credentials
+  key: DATABASE_URL
+
+job:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+podAnnotations: {}
+imagePullSecrets: []
+nodeSelector: {}
+tolerations: []
+affinity: {}

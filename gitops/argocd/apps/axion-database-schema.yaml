@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: axion-database-schema
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: axion
+  source:
+    repoURL: https://github.com/santandevops01012025/Axion-UI.git
+    path: axion-database-schema/helm/axion-database-schema
+    targetRevision: main
+    helm:
+      parameters:
+        - name: image.repository
+          value: ghcr.io/devopsinsiders/axion-database-schema
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: axion
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

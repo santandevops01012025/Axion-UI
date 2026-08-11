@@ -1,0 +1,26 @@
+postgres:
+  image: postgres:16-alpine
+  pullPolicy: IfNotPresent
+  user: axion_user
+  # Plain password used by the POSTGRES_PASSWORD secret
+  password: "P@ssw01rd@123"
+  database: axion_db
+  port: 5432
+
+# The one-time schema provider image (already validated + Trivy-scanned)
+schemaImage:
+  repository: ghcr.io/devopsinsiders/axion-database-schema
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  name: axion-postgres
+
+storage:
+  size: 5Gi
+  # storageClassName: ""   # uncomment to pin a class
+
+imagePullSecrets: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
