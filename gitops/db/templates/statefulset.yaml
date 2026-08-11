@@ -76,6 +76,7 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             - name: data
               mountPath: /var/lib/postgresql/data
+              subPath: pgdata
       volumes:
         - name: schema-init
           emptyDir: {}
