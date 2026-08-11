@@ -27,8 +27,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Create cache dirs writable by nginx user
 RUN mkdir -p /var/cache/nginx/client_temp && chown -R nginx:nginx /var/cache/nginx
 
-# Drop worker privileges after startup (nginx master stays root, workers run as nginx)
-USER nginx
+# Worker processes run as nginx via "user nginx;" in nginx.conf
 
 EXPOSE 80
 
