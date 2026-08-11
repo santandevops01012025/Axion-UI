@@ -6,7 +6,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/santandevops01012025/axion-ui
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   pullSecrets: []  # e.g. ["ghcr-pull"] if the cluster needs a token to pull GHCR
 
 nameOverride: ""
