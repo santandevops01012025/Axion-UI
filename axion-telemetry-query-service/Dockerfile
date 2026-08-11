@@ -3,7 +3,7 @@
 #############################################################
 # Stage 1 - Resolve dependencies into a wheelhouse
 #############################################################
-FROM python:3.13-slim AS builder
+FROM python:3.13-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN pip wheel --no-cache-dir -w /wheels -r requirements.txt
 #############################################################
 # Stage 2 - Runtime only ships wheels + code (no build tooling)
 #############################################################
-FROM python:3.13-slim AS runtime
+FROM python:3.13-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -23,7 +23,7 @@ WORKDIR /app
 
 # Install prebuilt wheels from the builder stage, then drop them
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/*
 
 COPY --chown=1001:1001 main.py config.py database.py ./
 
