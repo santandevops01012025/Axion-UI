@@ -27,7 +27,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Create cache dirs writable by nginx user
 RUN mkdir -p /var/cache/nginx/client_temp && chown -R nginx:nginx /var/cache/nginx
 
-# Worker processes run as nginx via "user nginx;" in nginx.conf
+# Run as root so nginx master can bind port 80, write pid, and create temp dirs.
+# Worker processes drop to nginx via "user nginx;" in nginx.conf.
+USER root
 
 EXPOSE 80
 
