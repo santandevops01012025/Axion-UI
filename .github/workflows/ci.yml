@@ -43,6 +43,7 @@ jobs:
           fetch-depth: 0
 
       - name: SonarQube Scan
+        if: ${{ secrets.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-scan-action@v5
         with:
           projectBaseDir: ${{ matrix.context }}
@@ -51,6 +52,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: SonarQube Quality Gate check
+        if: ${{ secrets.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
         uses: SonarSource/sonarqube-quality-gate-action@v1.2
         with:
           projectBaseDir: ${{ matrix.context }}
