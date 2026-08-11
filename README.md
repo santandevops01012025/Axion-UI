@@ -414,16 +414,58 @@ kubectl annotate svc ingress-nginx-controller -n ingress-nginx \
 
 Wait 2-3 minutes for the Standard LB to reconfigure the probes.
 
-### Step 13: Create the Ingress resource
+### Step 13: Install cert-manager for TLS
+
+```bash
+# Add the Jetstack Helm repo
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+# Install cert-manager with CRDs
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --set crds.enabled=true
+
+# Create a Let's Encrypt production ClusterIssuer
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: your-email@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+```
+
+### Step 14: Create the Ingress with TLS
+
+The ingress in `gitops/argocd/apps/axion-ingress.yaml` includes TLS configuration
+with the `cert-manager.io/cluster-issuer: letsencrypt-prod` annotation. cert-manager
+automatically provisions a Let's Encrypt certificate.
 
 ```bash
 kubectl apply -f gitops/argocd/apps/axion-ingress.yaml
+
+# Verify the certificate was issued
+kubectl get certificate -n axion
 ```
 
-This creates an Ingress rule that routes traffic from `axion.santansre.shop`
-to the `axion-ui` service on port 80.
+Expected output:
+```
+NAME        READY   SECRET      AGE
+axion-tls   True    axion-tls   30s
+```
 
-### Step 14: Add NSG rules for HTTP traffic
+### Step 15: Add NSG rules for HTTP and HTTPS traffic
 
 ```bash
 # Get the MC resource group name
@@ -461,9 +503,21 @@ az network nsg rule create \
   --access Allow \
   --direction Inbound \
   --description "Allow Azure LB health probes to ingress nodePorts"
+
+# Allow HTTPS (port 443) from any source
+az network nsg rule create \
+  --resource-group $MC_RG \
+  --nsg-name $NSG_NAME \
+  --name AllowHTTPS \
+  --priority 102 \
+  --destination-port-ranges 443 \
+  --protocol Tcp \
+  --access Allow \
+  --direction Inbound \
+  --description "Allow HTTPS for Ingress Controller"
 ```
 
-### Step 15: Configure DNS
+### Step 16: Configure DNS
 
 Point your domain to the ingress external IP:
 
@@ -476,17 +530,17 @@ Point your domain to the ingress external IP:
 nslookup axion.santansre.shop
 ```
 
-### Step 16: Verify external access
+### Step 17: Verify external access
 
 ```bash
-# Test with curl (add Host header to match ingress rule)
-curl -H "Host: axion.santansre.shop" http://48.206.108.209/
+# Test HTTPS
+curl -k https://axion.santansre.shop/
 
 # Test the API proxy
-curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/devices
+curl -k https://axion.santansre.shop/api/devices
 
 # Open in browser
-# http://axion.santansre.shop
+# https://axion.santansre.shop
 ```
 
 ---
@@ -495,8 +549,8 @@ curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/devices
 
 ### Test via the public ingress (recommended)
 
-Open **http://axion.santansre.shop** in your browser. You should see the
-Axion Dashboard login page.
+Open **https://axion.santansre.shop** in your browser. You should see the
+Axion Dashboard login page with a valid TLS certificate (Let's Encrypt).
 
 **Login credentials** (hardcoded in `Login.tsx`):
 
@@ -513,10 +567,10 @@ Axion Dashboard login page.
 
 ```bash
 # Devices endpoint (through ingress)
-curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/devices
+curl -k https://axion.santansre.shop/api/devices
 
 # Dashboard summary
-curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/dashboard/summary
+curl -k https://axion.santansre.shop/api/dashboard/summary
 ```
 
 ### Test all services from inside the cluster
@@ -679,6 +733,26 @@ curl -v -H "Host: axion.santansre.shop" http://<EXTERNAL-IP>/
 ingress controller returns 404 on `/`, so probes fail and the LB drops all
 traffic. The fix is the annotation in Step 12.
 
+### TLS certificate not issuing
+
+```bash
+# Check certificate status
+kubectl get certificate -n axion
+kubectl describe certificate axion-tls -n axion
+
+# Check cert-manager logs
+kubectl logs -n cert-manager deploy/cert-manager --tail=50
+
+# Check ClusterIssuer
+kubectl get clusterissuer letsencrypt-prod -o yaml
+
+# Common causes:
+# - DNS not pointing to ingress IP → verify with nslookup
+# - Port 80 not reachable from internet → check NSG rules
+# - ClusterIssuer email invalid → update the issuer
+# - Rate limit hit → wait or use letsencrypt-staging for testing
+```
+
 ### Ingress returns 404 for API routes
 
 ```bash
@@ -769,6 +843,10 @@ kubectl delete namespace axion
 # Delete the ArgoCD apps
 kubectl delete -n argocd -f gitops/argocd/app-of-apps.yaml
 kubectl delete -n argocd -f gitops/argocd/project.yaml
+
+# Uninstall cert-manager
+helm uninstall cert-manager -n cert-manager
+kubectl delete namespace cert-manager
 
 # Uninstall the ingress controller
 helm uninstall ingress-nginx -n ingress-nginx
