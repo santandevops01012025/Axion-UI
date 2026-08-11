@@ -4,7 +4,7 @@
 # Stage 1 - Validate the SQL migrations against a scratch DB.
 # Catches syntax/DDL errors at build time, before shipping.
 #############################################################
-FROM postgres:16-alpine AS validator
+FROM postgres:17-alpine AS validator
 
 WORKDIR /work
 
@@ -27,7 +27,7 @@ RUN initdb -D /tmp/pgdata --auth=trust -U postgres && \
 # Used standalone to boot a fresh DB, or (in K8s) from an
 # initContainer that seeds the Postgres data dir.
 #############################################################
-FROM postgres:16-alpine AS runtime
+FROM postgres:17-alpine AS runtime
 
 COPY --from=validator /work/*.sql /docker-entrypoint-initdb.d/
 

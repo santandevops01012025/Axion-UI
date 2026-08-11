@@ -3,7 +3,7 @@
 #############################################################
 # Stage 1 - Resolve dependencies into a wheelhouse
 #############################################################
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --wheel-dir=/wheels -r requirements.txt
 #############################################################
 # Stage 2 - Runtime ships only wheels + the simulator
 #############################################################
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

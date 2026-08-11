@@ -3,7 +3,7 @@
 #############################################################
 # Stage 1 - Build the React application
 #############################################################
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npm run build
 #############################################################
 # Stage 2 - Runtime: serve the built SPA with Nginx
 #############################################################
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.31.3-alpine AS runtime
 
 # Custom Nginx config (SPA routing, API proxy, security headers)
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -1,9 +1,159 @@
-https://github.com/devopsinsiders/axion-ui
+Phase 0 — Prerequisites (install Docker Desktop)
+docker version
+docker compose version
+Expected: both return version info. If docker is not found:
+1. Download & install Docker Desktop for Windows → enable WSL 2 backend → restart.
+2. Reopen a terminal and run the two commands above.
+Paste the output → I confirm.
+Phase 1 — Local end-to-end (Docker Compose, DB as Docker image)
+Run in the repo root C:\Users\santa\Desktop\Devops\Axion UI:
+# 1. Validate compose file (no build yet)
+docker compose config
 
-https://github.com/devopsinsiders/axion-telemetry-query-service
+# 2. Build all 5 images (multi-stage)
+docker compose build
 
-https://github.com/devopsinsiders/axion-ingestion-service
+# 3. Start the stack (db -> schema-init -> services)
+docker compose up -d
+docker compose ps
+Expected docker compose ps: 6 containers — axion-db, axion-schema-init (exited 0 = success), axion-telemetry-query, axion-ingestion, axion-data-simulator, axion-ui.
+# 4. DB is seeded with the schema
+docker compose exec db psql -U axion_user -d axion_db -c "\dt"
 
-https://github.com/devopsinsiders/axion-data-simulator
+# 5. Health + API checks
+curl.exe -s http://localhost:8080/health
+curl.exe -s http://localhost:8000/dashboard/summary
+curl.exe -s -X POST http://localhost:8001/api/v1/telemetry/ingest -H "Content-Type: application/json" -d '{"deviceId":"TEST-01","deviceType":"MOTOR","refineryRegion":"NORTH_PLANT","timestamp":"2026-08-11T10:00:00Z","metrics":{"temperature":75.5,"vibration":4.2,"current":12.3}}'
 
-https://github.com/devopsinsiders/axion-database-schema 
+# 6. Open the dashboard
+Start-Process http://localhost:8080
+Expected: \dt shows telemetry; /health → ok; summary returns onlineAssets; ingest returns 201 {"status":"accepted",...}; dashboard renders.
+Paste the output → I confirm.
+Phase 2 — GitHub Actions CI (all 5 repos)
+# Make a trivial change so the workflow triggers
+Add-Content -Path README.md -Value "`n[test] trigger ci`n"
+git add -A; git commit -m "test: trigger CI"; git push origin main
+Expected: at https://github.com/santandevops01012025/Axion-UI/actions a run CI/CD - Axion starts with 10 jobs:
+- 5 × SonarQube - <service>
+- 5 × Build -> Trivy -> Push (<service>)
+If the SonarQube jobs fail, it means SONAR_HOST_URL/SONAR_TOKEN secrets aren't set yet — that's expected; the build jobs will then be skipped (needs gate). Set the secrets in Settings → Secrets and variables → Actions, then re-run.
+Paste the run URL or job list → I confirm.
+Phase 3 — Verify GHCR images
+# with Docker logged in to ghcr.io (your account + PAT with write:packages)
+docker login ghcr.io -u santandevops01012025
+docker pull ghcr.io/santandevops01012025/axion-ui:latest
+docker pull ghcr.io/santandevops01012025/axion-ingestion-service:latest
+Expected: docker pull succeeds for each pushed image. Alternatively check packages at https://github.com/santandevops01012025/Axion-UI/pkgs.
+Paste the pull output → I confirm.
+Phase 4 — Helm (no cluster needed)
+helm lint .\axion-ui\helm\axion-ui
+helm lint .\gitops\db
+helm template axion .\gitops\db --namespace axion | Out-File rendered.yaml
+kubectl create --dry-run=client -f rendered.yaml -o yaml
+Expected: 1 chart(s) linted, 0 chart(s) failed, kubectl create --dry-run validates the rendered manifests.
+Paste the output → I confirm.
+Phase 5 — Kubernetes + Argo CD (needs a cluster)
+Optional but final proof. Install Docker Desktop's built-in Kubernetes (Settings → Kubernetes → Enable) or minikube start.
+kubectl get nodes
+helm repo add argo https://argoproj.github.io/argo-helm
+helm install argocd argo/argo-cd -n argocd --create-namespace
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
+kubectl -n argocd apply -f .\gitops\argocd\project.yaml
+kubectl -n argocd apply -f .\gitops\argocd\app-of-apps.yaml
+kubectl get applications -n argocd -w
+kubectl get pods,svc -n axion
+Expected: Argo CD syncs all Applications (health=Healthy/Synced) and pods appear in axion namespace.
+Paste the kubectl get applications output → I confirm.
+Start with Phase 0 and paste the output.
+▣  Build · DeepSeek V4 Flash Free · 1m 15s
+i want to use kubernetes AKS . please provde steps as per AKS
++ Thought: 5.2s
+Let me check your Azure tooling first
+$ $c = Get-Command az -ErrorAction SilentlyContinue; if ($c) { "az: $($c.Source)"; az version 2>&1 | Select-Object -First 3 } else { "az: NOT FOUND" }; $k = Get-Command kubectl -ErrorAction SilentlyContinue; if ($k) { kubectl config get-contexts 2>&1 | Select-Object -First 5 }
+az: C:\Users\santa\Desktop\Devops\Software\azure-cli-2.89.0-x64\bin\az.cmd
+{
+  "azure-cli": "2.89.0",
+  "azure-cli-core": "2.89.0",
+CURRENT   NAME                 CLUSTER              AUTHINFO                                      NAMESPACE
+          aks-cluster          aks-cluster          clusterUser_aks-rg_aks-cluster                
+          aks-demo-cluster     aks-demo-cluster     clusterUser_rg-aks-Uday_aks-demo-cluster      
+          akstestcluster       akstestcluster       clusterUser_aks-test-rg_akstestcluster        
+          minikube             minikube             minikube                                      default
++ Thought: 7.1s
+You already have AKS clusters configured (aks-cluster, aks-demo-cluster, akstestcluster). Here's the full procedure adapted for AKS. Keep Phase 0–4 from before (Docker for building/pushing, GHCR push, Helm lint). Phase 5 becomes:
+Phase 5 — Deploy to AKS with Argo CD
+5.1 Login & pick a cluster
+az login
+az account show
+Expected: subscription JSON. If the wrong subscription, az account set --subscription "<name>".
+Use one of your existing clusters (I'll use aks-cluster):
+az aks get-credentials --resource-group aks-rg --name aks-cluster --overwrite-existing
+kubectl config use-context aks-cluster
+kubectl get nodes
+Expected: list of agent Ready nodes. Paste the node list → I confirm.
+Don't have AKS yet? Create one instead:
+az group create -n axion-rg -l eastus
+az aks create -g axion-rg -n axion-aks --node-count 2 --enable-managed-identity --generate-ssh-keys
+az aks get-credentials -g axion-rg -n axion-aks --overwrite-existing
+
+5.2 Install Argo CD
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+helm install argocd argo/argo-cd -n argocd --create-namespace `
+  --set server.service.type=LoadBalancer `
+  --set server.ingress.enabled=false
+Expected: NAME: argocd deployed, pod count listed.
+kubectl wait --for=condition=available deploy/argocd-server -n argocd --timeout=300s
+kubectl get svc argocd-server -n argocd
+Expected: argocd-server with an EXTERNAL-IP (may show <pending> for 2–5 min while Azure LB provisions). Paste output → I confirm.
+5.3 Register the monorepo in Argo CD
+kubectl -n argocd create secret generic axion-repo `
+  --from-literal=type=git `
+  --from-literal=url=https://github.com/santandevops01012025/Axion-UI.git `
+  --from-literal=username=YOUR_GITHUB_USER `
+  --from-literal=password=YOUR_PAT `
+  -o yaml --dry-run=client | kubectl apply -f -
+kubectl -n argocd label secret axion-repo argocd.argoproj.io/secret-type=repository
+Use a PAT with repo scope (needed even for public repos on some Argo CD versions). This avoids the repo-add CLI. If the repo is fully public you can skip this and only argocd repo add.
+5.4 Deploy the app-of-apps
+kubectl -n argocd apply -f .\gitops\argocd\project.yaml
+kubectl -n argocd apply -f .\gitops\argocd\app-of-apps.yaml
+kubectl get applications -n argocd -w
+Expected: 7 Applications appear (axion-app-of-apps, axion-postgres, axion-ui, axion-telemetry-query-service, axion-ingestion-service, axion-data-simulator, axion-database-schema) moving to Synced / Healthy. Paste output → I confirm.
+5.5 Verify workloads
+kubectl get ns axion
+kubectl get pods,svc,statefulset -n axion
+kubectl get pvc -n axion
+Expected: Postgres StatefulSet 1/1 Running, telemetry/ingestion pods Running, simulator Running, UI pods Running. Paste output → I confirm.
+5.6 Access the dashboard + Argo CD UI
+kubectl port-forward -n axion svc/axion-ui 8080:80
+Start-Process http://localhost:8080
+# Argo CD UI credentials
+$pw = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($pw))
+Start-Process "http://<argocd-server EXTERNAL-IP>"
+Login admin + that password.
+5.7 (If GHCR images are private) pull secret on AKS
+kubectl -n axion create secret docker-registry ghcr-pull `
+  --docker-server=ghcr.io `
+  --docker-username=santandevops01012025 `
+  --docker-password=<PAT with read:packages>
+Then set imagePullSecrets via argocd app set <app> --helm-set imagePullSecrets[0].name=ghcr-pull for each app (or add to chart values.yaml).
+Start at 5.1 and paste the kubectl get nodes output. We'll confirm each section before moving on.
+▣  Build · DeepSeek V4 Flash Free · 40.2s
+do i need to use docker compose . i can just use AKS for all steo instead of Docker comose
+
++ Thought: 9.3s
+Correct — you can skip Docker Compose entirely. It's only for running the stack on your own machine. The cloud-only flow is:
+GitHub (code) ─► GitHub Actions (build + Trivy + SonarQube) ─► GHCR (images) ─► AKS ◄─ Argo CD (gitops)
+Even local Docker is not required for this path — GitHub's runners build and push the images for you. PostgreSQL still runs as a Docker image (the postgres:16-alpine StatefulSet on AKS), so the "database as Docker image" requirement is satisfied there.
+Cloud-only step order (no docker compose)
+1. Ensure the images get pushed to GHCR first — the workflow gates on SonarQube. If SONAR_HOST_URL/SONAR_TOKEN secrets aren't set in the repo, the build-scan-push jobs are skipped and AKS has nothing to pull.
+- Option A (recommended): set those two secrets in GitHub → Settings → Secrets → Actions, then run the workflow.
+- Option B (quick test): temporarily edit .github/workflows/ci.yml to remove the needs: code-quality from build-scan-push, push, and confirm GHCR has the images.
+2. Login + cluster (az login, az aks get-credentials, kubectl get nodes)
+3. Install Argo CD on AKS (helm, with LoadBalancer service)
+4. Register the repo + kubectl apply -f gitops/argocd/project.yaml + app-of-apps.yaml
+5. Verify: kubectl get applications -n argocd → Synced/Healthy; pods in axion namespace Running.
+If your GHCR packages are private, add the ghcr-pull imagePullSecret on AKS (step 5.7) — that's the one thing AKS needs to pull the images.
+So: docker compose is optional; the AKS + GitHub Actions + ArgoCD path is fully self-contained. Want me to walk you through step 1 now (checking the GHCR images exist / setting up the workflow so images push)?

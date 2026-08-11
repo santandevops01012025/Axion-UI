@@ -1,5 +1,5 @@
 postgres:
-  image: postgres:16-alpine
+  image: postgres:17-alpine
   pullPolicy: IfNotPresent
   user: axion_user
   # Plain password used by the POSTGRES_PASSWORD secret
