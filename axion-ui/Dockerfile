@@ -24,6 +24,9 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy compiled assets from the builder stage only
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Create cache dirs writable by nginx user
+RUN mkdir -p /var/cache/nginx/client_temp && chown -R nginx:nginx /var/cache/nginx
+
 # Drop worker privileges after startup (nginx master stays root, workers run as nginx)
 USER nginx
 
