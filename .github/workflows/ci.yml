@@ -122,28 +122,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Trivy image scan (diagnostic) — shows CRITICAL findings in log.
-      - name: Trivy scan (table)
-        if: always()
+      # Trivy image scan — fails the pipeline on CRITICAL CVEs.
+      - name: Trivy scan (gate)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.app }}:${{ steps.meta.outputs.version }}
           format: table
           severity: CRITICAL
           ignore-unfixed: true
+          exit-code: 1
           trivyignores: ${{ matrix.context }}/.trivyignore
 
-      # Trivy image scan — fails the pipeline on CRITICAL CVEs.
-      - name: Trivy scan (gate)
+      # Upload SARIF to GitHub Security (always, for visibility).
+      - name: Trivy scan (SARIF upload)
+        if: always()
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.app }}:${{ steps.meta.outputs.version }}
           format: sarif
           output: trivy-results.sarif
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
-          trivyignores: ${{ matrix.context }}/.trivyignore
 
       - name: Upload Trivy SARIF to GitHub Security
         if: always()
