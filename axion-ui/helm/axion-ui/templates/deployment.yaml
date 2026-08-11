@@ -26,8 +26,6 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "axion-ui.fullname" . }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]

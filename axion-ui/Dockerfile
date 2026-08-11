@@ -24,12 +24,12 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy compiled assets from the builder stage only
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create cache dirs writable by nginx user
-RUN mkdir -p /var/cache/nginx/client_temp && chown -R nginx:nginx /var/cache/nginx
+# Create dirs writable by nginx user (UID 101)
+# Kubernetes securityContext enforces runAsUser: 101 (nginx).
+RUN mkdir -p /run /var/cache/nginx/client_temp && chown -R nginx:nginx /run /var/cache/nginx
 
-# Run as root so nginx master can bind port 80, write pid, and create temp dirs.
-# Worker processes drop to nginx via "user nginx;" in nginx.conf.
-USER root
+# Drop worker privileges after startup (nginx master stays root, workers run as nginx)
+USER nginx
 
 EXPOSE 80
 
