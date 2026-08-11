@@ -66,10 +66,10 @@ spec:
             periodSeconds: 15
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 256Mi
             limits:
-              cpu: "1"
+              cpu: 500m
               memory: 1Gi
           volumeMounts:
             - name: schema-init
