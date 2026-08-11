@@ -29,7 +29,8 @@ Refinery devices (simulated)
 axion-data-simulator  ──POST──►  axion-ingestion-service  ──►  PostgreSQL 17
                                                               ▲
                                                               │
-        Browser ──► axion-ui (Nginx) ──/api/*──► axion-telemetry-query-service
+        Browser ──► NGINX Ingress ──► axion-ui (Nginx) ──/api/*──► axion-telemetry-query-service
+                  (axion.santansre.shop)
 ```
 
 | Service | Purpose | Stack |
@@ -380,9 +381,143 @@ axion-telemetry-query-service-xxxxx              1/1     Running   0          5m
 axion-ui-xxxxx                                   1/1     Running   0          5m
 ```
 
+### Step 11: Install NGINX Ingress Controller
+
+```bash
+# Add the ingress-nginx Helm repo
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# Install the ingress controller
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+
+# Wait for the external IP to be assigned
+kubectl get svc -n ingress-nginx ingress-nginx-controller -w
+
+# Note the EXTERNAL-IP (e.g., 48.206.108.209)
+```
+
+### Step 12: Configure the health probe annotation
+
+The Standard Load Balancer creates health probes using path `/` by default. The
+ingress controller returns 404 on `/` which causes probes to fail and blocks all
+traffic. Fix this by setting the probe path to `/healthz`:
+
+```bash
+kubectl annotate svc ingress-nginx-controller -n ingress-nginx \
+  "service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path=/healthz" \
+  --overwrite
+```
+
+Wait 2-3 minutes for the Standard LB to reconfigure the probes.
+
+### Step 13: Create the Ingress resource
+
+```bash
+kubectl apply -f gitops/argocd/apps/axion-ingress.yaml
+```
+
+This creates an Ingress rule that routes traffic from `axion.santansre.shop`
+to the `axion-ui` service on port 80.
+
+### Step 14: Add NSG rules for HTTP traffic
+
+```bash
+# Get the MC resource group name
+MC_RG=$(az aks show \
+  --resource-group rg-compute-dev-eastus \
+  --name aks-enterprise-dev-eastus \
+  --query "nodeResourceGroup" -o tsv)
+
+# Get the NSG name
+NSG_NAME=$(az network nsg list \
+  --resource-group $MC_RG \
+  --query "[0].name" -o tsv)
+
+# Allow HTTP (port 80) from any source
+az network nsg rule create \
+  --resource-group $MC_RG \
+  --nsg-name $NSG_NAME \
+  --name AllowHTTP \
+  --priority 100 \
+  --destination-port-ranges 80 \
+  --protocol Tcp \
+  --access Allow \
+  --direction Inbound \
+  --description "Allow HTTP for Ingress Controller"
+
+# Allow Azure LB health probes
+az network nsg rule create \
+  --resource-group $MC_RG \
+  --nsg-name $NSG_NAME \
+  --name AllowHealthProbe \
+  --priority 101 \
+  --destination-port-ranges 32012 32047 \
+  --protocol Tcp \
+  --source-address-prefixes AzureLoadBalancer \
+  --access Allow \
+  --direction Inbound \
+  --description "Allow Azure LB health probes to ingress nodePorts"
+```
+
+### Step 15: Configure DNS
+
+Point your domain to the ingress external IP:
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A | axion.santansre.shop | 48.206.108.209 | 300 |
+
+```bash
+# Verify DNS resolution
+nslookup axion.santansre.shop
+```
+
+### Step 16: Verify external access
+
+```bash
+# Test with curl (add Host header to match ingress rule)
+curl -H "Host: axion.santansre.shop" http://48.206.108.209/
+
+# Test the API proxy
+curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/devices
+
+# Open in browser
+# http://axion.santansre.shop
+```
+
 ---
 
 ## Verify the Deployment
+
+### Test via the public ingress (recommended)
+
+Open **http://axion.santansre.shop** in your browser. You should see the
+Axion Dashboard login page.
+
+**Login credentials** (hardcoded in `Login.tsx`):
+
+| Field | Value |
+|-------|-------|
+| Email | `info@devopsinsiders.com` |
+| Password | `P@ssw01rd@123` |
+
+> Note: This is hardcoded client-side authentication (not secure for
+> production). For a lab/demo environment it works, but for real use you'd
+> want proper backend auth.
+
+### Test the API from the command line
+
+```bash
+# Devices endpoint (through ingress)
+curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/devices
+
+# Dashboard summary
+curl -H "Host: axion.santansre.shop" http://48.206.108.209/api/dashboard/summary
+```
 
 ### Test all services from inside the cluster
 
@@ -408,7 +543,7 @@ kubectl exec $POD -n axion -- python3 -c "import urllib.request; print(urllib.re
 kubectl exec $POD -n axion -- python3 -c "import urllib.request,json; print(json.dumps(json.loads(urllib.request.urlopen('http://axion-ui:80/api/dashboard/summary').read().decode()), indent=2))"
 ```
 
-### Test via port-forward from your machine
+### Test via port-forward (alternative)
 
 ```bash
 # Terminal 1: UI dashboard
@@ -418,7 +553,6 @@ kubectl port-forward svc/axion-ui 8080:80 -n axion
 # Terminal 2: Query API
 kubectl port-forward svc/axion-telemetry-query-service 8000:8000 -n axion
 curl http://localhost:8000/health
-curl http://localhost:8000/devices
 
 # Terminal 3: Ingestion API
 kubectl port-forward svc/axion-ingestion-service 8001:8000 -n axion
@@ -506,6 +640,55 @@ kubectl get secret axion-db-secret -n axion
 kubectl get pvc -n axion
 ```
 
+### External access times out (ingress)
+
+```bash
+# 1. Check ingress resource exists
+kubectl get ingress -n axion
+
+# 2. Check ingress controller external IP
+kubectl get svc -n ingress-nginx ingress-nginx-controller
+
+# 3. Verify the health probe annotation
+kubectl get svc ingress-nginx-controller -n ingress-nginx \
+  -o jsonpath='{.metadata.annotations}'
+
+# Expected: service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path=/healthz
+
+# 4. Check LB probe path
+az network lb probe list \
+  --resource-group MC_rg-compute-dev-eastus_aks-enterprise-dev-eastus_eastus \
+  --lb-name kubernetes \
+  --query "[].{name:name, path:requestPath}" -o table
+
+# 5. Verify NSG rules
+az network nsg rule list \
+  --resource-group MC_rg-compute-dev-eastus_aks-enterprise-dev-eastus_eastus \
+  --nsg-name aks-agentpool-10099729-nsg \
+  --query "[?direction=='Inbound'].{name:name, priority:priority, dstPort:destinationPortRange}" -o table
+
+# 6. Test from inside cluster
+kubectl exec -n ingress-nginx deploy/ingress-nginx-controller -- \
+  curl -s -o /dev/null -w "%{http_code}" http://localhost/
+
+# 7. Test with Host header from your machine
+curl -v -H "Host: axion.santansre.shop" http://<EXTERNAL-IP>/
+```
+
+**Common cause:** The Standard LB health probe checks path `/` by default. The
+ingress controller returns 404 on `/`, so probes fail and the LB drops all
+traffic. The fix is the annotation in Step 12.
+
+### Ingress returns 404 for API routes
+
+```bash
+# Check that the ingress backend points to axion-ui service
+kubectl get ingress axion-ingress -n axion -o yaml
+
+# Verify nginx proxy_pass has trailing slash (strips /api/ prefix)
+# The nginx.conf should have: proxy_pass http://axion-telemetry-query-service:8000/;
+```
+
 ---
 
 ## Useful Commands
@@ -577,12 +760,23 @@ SELECT DISTINCT device_id FROM telemetry;
 ### Cleanup
 
 ```bash
+# Delete the ingress resource
+kubectl delete ingress axion-ingress -n axion
+
 # Delete the axion namespace (removes all workloads)
 kubectl delete namespace axion
 
 # Delete the ArgoCD apps
 kubectl delete -n argocd -f gitops/argocd/app-of-apps.yaml
 kubectl delete -n argocd -f gitops/argocd/project.yaml
+
+# Uninstall the ingress controller
+helm uninstall ingress-nginx -n ingress-nginx
+kubectl delete namespace ingress-nginx
+
+# Uninstall ArgoCD
+helm uninstall argocd -n argocd
+kubectl delete namespace argocd
 
 # Delete the AKS cluster
 az aks delete \
