@@ -10,6 +10,8 @@ WORKDIR /work
 
 COPY *.sql /work/
 
+USER postgres
+
 RUN initdb -D /tmp/pgdata --auth=trust -U postgres && \
     mkdir -p /tmp/pgsock && \
     pg_ctl -D /tmp/pgdata -l /tmp/pg.log -o "-p 5433 -k /tmp/pgsock" start && \

@@ -8,7 +8,7 @@ FROM python:3.13-slim AS builder
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --wheel-dir=/wheels -r requirements.txt
+RUN pip wheel --no-cache-dir -w /wheels -r requirements.txt
 
 #############################################################
 # Stage 2 - Runtime only ships wheels + code (no build tooling)
