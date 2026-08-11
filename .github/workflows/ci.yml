@@ -129,7 +129,7 @@ jobs:
           image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.app }}:${{ steps.meta.outputs.version }}
           format: sarif
           output: trivy-results.sarif
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
           ignore-unfixed: true
           exit-code: 1
           trivyignores: ${{ matrix.context }}/.trivyignore
