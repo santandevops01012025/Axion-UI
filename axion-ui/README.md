@@ -3,7 +3,7 @@
 ## 🔄 CI/CD & Deployment
 
 - **Multi-stage Dockerfile**: `node:20-alpine` build → slim `nginx:1.27-alpine` runtime (SPA + `/api` proxy to `axion-telemetry-query-service`)
-- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → build → **Trivy** scan (fails on HIGH/CRITICAL, SARIF uploaded) → push to **ghcr.io/devopsinsiders/axion-ui**
+- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → build → **Trivy** scan (fails on HIGH/CRITICAL, SARIF uploaded) → push to **ghcr.io/santandevops01012025/axion-ui**
 - **Helm chart**: `helm/axion-ui` (Deployment + Service + optional HPA, non-root & hardened)
 - **Argo CD**: deployed by the `axion-ui` Application in [axion-gitops](https://github.com/devopsinsiders/axion-gitops)
 

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: axion-ui
-          image: ghcr.io/devopsinsiders/axion-ui:latest
+          image: ghcr.io/santandevops01012025/axion-ui:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

@@ -13,7 +13,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrate
-          image: ghcr.io/devopsinsiders/axion-database-schema:latest
+          image: ghcr.io/santandevops01012025/axion-database-schema:latest
           imagePullPolicy: IfNotPresent
           command: ["psql"]
           args:

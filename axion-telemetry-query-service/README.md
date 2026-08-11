@@ -26,6 +26,6 @@ uvicorn main:app --reload --port 8000
 ## 🔄 CI/CD & Deployment
 
 - **Multi-stage Dockerfile** (wheels only in runtime stage, non-root user, `/health` probe)
-- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → build → **Trivy** scan (fails on HIGH/CRITICAL) → push to **ghcr.io/devopsinsiders/axion-telemetry-query-service**
+- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → build → **Trivy** scan (fails on HIGH/CRITICAL) → push to **ghcr.io/santandevops01012025/axion-telemetry-query-service**
 - **Helm chart**: `helm/axion-telemetry-query-service` (Deployment + Service + HPA, DB DSN from secret `axion-db-credentials`)
 - **Argo CD**: managed by the `axion-telemetry-query-service` Application in [axion-gitops](https://github.com/devopsinsiders/axion-gitops)

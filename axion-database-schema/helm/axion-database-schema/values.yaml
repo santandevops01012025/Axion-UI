@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/devopsinsiders/axion-database-schema
+  repository: ghcr.io/santandevops01012025/axion-database-schema
   tag: latest
   pullPolicy: IfNotPresent
 

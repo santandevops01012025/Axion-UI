@@ -14,7 +14,7 @@ spec:
     helm:
       parameters:
         - name: schemaImage.repository
-          value: ghcr.io/devopsinsiders/axion-database-schema
+          value: ghcr.io/santandevops01012025/axion-database-schema
   destination:
     server: https://kubernetes.default.svc
     namespace: axion

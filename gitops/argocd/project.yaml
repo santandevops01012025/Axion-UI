@@ -5,10 +5,10 @@ metadata:
   namespace: argocd
 spec:
   description: Axion platform
-  # Allow all devopsinsiders repositories (tighten with explicit lists for prod)
+  # Allow the Axion monorepo (tighten with explicit lists for prod)
   sourceRepos:
-    - "https://github.com/devopsinsiders/*"
-    - "https://github.com/devopsinsiders/*.git"
+    - "https://github.com/santandevops01012025/Axion-UI"
+    - "https://github.com/santandevops01012025/Axion-UI.git"
   destinations:
     - namespace: axion
       server: https://kubernetes.default.svc

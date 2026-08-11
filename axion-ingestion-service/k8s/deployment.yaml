@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: axion-ingestion-service
-          image: ghcr.io/devopsinsiders/axion-ingestion-service:latest
+          image: ghcr.io/santandevops01012025/axion-ingestion-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000

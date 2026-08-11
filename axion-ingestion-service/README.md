@@ -234,7 +234,7 @@ axion-ingestion-service/
 
 ## 🔄 CI/CD & Deployment
 
-- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → multi-stage build → **Trivy** image scan (fails on HIGH/CRITICAL, SARIF to GitHub Security) → push to **ghcr.io/devopsinsiders/axion-ingestion-service**
+- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → multi-stage build → **Trivy** image scan (fails on HIGH/CRITICAL, SARIF to GitHub Security) → push to **ghcr.io/santandevops01012025/axion-ingestion-service**
 - **Helm chart** in `helm/axion-ingestion-service` (Deployment + Service + HPA)
 - **Argo CD**: managed by the `axion-ingestion-service` Application in [axion-gitops](https://github.com/devopsinsiders/axion-gitops)
 

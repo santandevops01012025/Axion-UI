@@ -64,7 +64,7 @@ The service is designed to be deployed via ArgoCD using the manifests stored in 
 
 ## 🐳 Docker
 The image is automatically built and pushed to GHCR via GitHub Actions.
-- **Image**: `ghcr.io/devopsinsiders/axion-data-simulator:latest`
+- **Image**: `ghcr.io/santandevops01012025/axion-data-simulator:latest`
 
 ## 🔄 CI/CD & Deployment
 

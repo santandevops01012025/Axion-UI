@@ -1,60 +1,29 @@
-name: CI/CD - Build, Scan & Push to GHCR
+name: Service CI - Build, Scan & Push (reusable)
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      app:
+        description: Short service name, used as the GHCR image name
+        required: true
+        type: string
+      context:
+        description: Path (from repo root) that contains the service Dockerfile
+        required: true
+        type: string
+      push-images:
+        description: Whether to push the image to GHCR (false for pull requests)
+        required: false
+        default: true
+        type: boolean
 
 env:
-  IMAGE: ghcr.io/${{ github.repository }}
+  IMAGE: ghcr.io/santandevops01012025/${{ inputs.app }}
 
 jobs:
-  # 1) CODE QUALITY gate (SonarQube) BEFORE any image is built.
-  code-quality:
-    name: SonarQube scan + quality gate
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: SonarQube Quality Gate check
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2
-        env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          args: "-Dsonar.projectBaseDir=."
-
-      # Optional commercial SCA (uncomment if licences available):
-      # - name: Checkmarx One
-      #   uses: checkmarx/ast-github-action@main
-      #   with:
-      #     base_uri: ${{ secrets.CHECKMARX_BASE_URI }}
-      #     cx_tenant: ${{ secrets.CHECKMARX_TENANT }}
-      #     cx_client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
-      #     cx_client_secret: ${{ secrets.CHECKMARX_CLIENT_SECRET }}
-      #     project_name: axion-ui
-      # - name: Black Duck
-      #   uses: blackducksoftware/github-action@v3
-      #   with:
-      #     blackduck_url: ${{ secrets.BLACKDUCK_URL }}
-      #     blackduck_token: ${{ secrets.BLACKDUCK_TOKEN }}
-
-  # 2) BUILD -> IMAGE CVE SCAN (Trivy, fail on HIGH/CRITICAL) -> PUSH to GHCR.
   build-scan-push:
-    name: Build -> Trivy -> Push (GHCR)
+    name: Build -> Trivy -> Push
     runs-on: ubuntu-latest
-    needs: code-quality
     permissions:
       contents: read
       packages: write
@@ -66,7 +35,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata
+      - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -75,16 +44,21 @@ jobs:
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
 
-      - name: Build image (local, no push)
+      # Build the multi-stage image locally (no push) so Trivy can scan it.
+      - name: Build image (local)
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/Dockerfile
           load: true
           tags: ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Trivy image scan - fails the pipeline on HIGH/CRITICAL CVEs.
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -95,7 +69,7 @@ jobs:
           ignore-unfixed: true
           exit-code: 1
 
-      - name: Upload Trivy SARIF
+      - name: Upload Trivy SARIF to GitHub Security
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -113,6 +87,7 @@ jobs:
       #     ./twistcli images scan --details --address $PRISMA_API_URL -u $PRISMA_USERNAME -p $PRISMA_PASSWORD docker.io/$IMAGE
 
       - name: Log in to GHCR
+        if: inputs.push-images
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -120,9 +95,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
+        if: inputs.push-images
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/devopsinsiders/axion-data-simulator
+  repository: ghcr.io/santandevops01012025/axion-data-simulator
   tag: latest
   pullPolicy: IfNotPresent
 

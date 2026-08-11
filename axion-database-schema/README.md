@@ -128,7 +128,7 @@ This schema is one component of the larger **Axion** platform:
 
 ## 🔄 CI/CD & Deployment
 
-- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → multi-stage build (SQL is validated against a scratch Postgres at build time) → **Trivy** image scan (fails on HIGH/CRITICAL) → push to **ghcr.io/devopsinsiders/axion-database-schema**
+- **Pipeline** (`.github/workflows/ci.yml`): SonarQube quality gate → multi-stage build (SQL is validated against a scratch Postgres at build time) → **Trivy** image scan (fails on HIGH/CRITICAL) → push to **ghcr.io/santandevops01012025/axion-database-schema**
 - **GitOps**: the `axion-postgres` chart in [axion-gitops](https://github.com/devopsinsiders/axion-gitops) seeds a PostgreSQL StatefulSet from this image (`initContainer` copies the validated `*.sql` into `/docker-entrypoint-initdb.d` on first boot)
 - **Helm chart** in `helm/axion-database-schema` provides a standalone one-shot migration Job alternative
 

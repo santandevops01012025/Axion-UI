@@ -14,7 +14,7 @@ spec:
     helm:
       parameters:
         - name: image.repository
-          value: ghcr.io/devopsinsiders/axion-ui
+          value: ghcr.io/santandevops01012025/axion-ui
   destination:
     server: https://kubernetes.default.svc
     namespace: axion

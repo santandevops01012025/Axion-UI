@@ -41,14 +41,14 @@ docker compose up --build
 | Ingestion API / docs | http://localhost:8001/docs |
 | PostgreSQL | localhost:5432 |
 
-## CI/CD (per microservice)
+## CI/CD
 
-`.github/workflows/ci.yml` in each service folder:
+GitHub Actions (`.github/workflows/`) runs for all five services via a matrix:
 
-1. **SonarQube** scan + quality gate (blocking; Checkmarx/Blackduck optional)
-2. Multi-stage Docker build
-3. **Trivy** image scan — fails on HIGH/CRITICAL, SARIF → GitHub Security
-4. Push image to **ghcr.io/devopsinsiders/<service>**
+1. `code-quality` — **SonarQube** scan + quality gate per service (blocking; Checkmarx/Blackduck hooks available)
+2. `build-scan-push` — reusable pipeline: multi-stage Docker build → **Trivy** image scan (fails on HIGH/CRITICAL, SARIF → GitHub Security) → push to **ghcr.io/santandevops01012025/<service>**
+
+Images are pushed on `main`/tags; pull requests get build + scan only.
 
 ## Kubernetes / Argo CD
 
@@ -62,5 +62,5 @@ Bootstrap steps: see `gitops/README.md`.
 
 ## Secrets (GitHub Actions)
 
-Per repository: `SONAR_HOST_URL`, `SONAR_TOKEN`. Optional commercial scanners:
+Repository secrets: `SONAR_HOST_URL`, `SONAR_TOKEN`. Optional commercial scanners:
 `CHECKMARX_*`, `BLACKDUCK_*`, `PRISMA_*` (commented in the workflows).

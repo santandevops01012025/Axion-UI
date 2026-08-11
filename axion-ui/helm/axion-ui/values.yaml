@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/devopsinsiders/axion-ui
+  repository: ghcr.io/santandevops01012025/axion-ui
   tag: latest
   pullPolicy: IfNotPresent
   pullSecrets: []  # e.g. ["ghcr-pull"] if the cluster needs a token to pull GHCR

@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: axion-data-simulator
-          image: ghcr.io/devopsinsiders/axion-data-simulator:latest
+          image: ghcr.io/santandevops01012025/axion-data-simulator:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: API_URL
