@@ -122,8 +122,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Trivy image scan - fails the pipeline on HIGH/CRITICAL CVEs.
+      # Trivy image scan - fails the pipeline on CRITICAL CVEs.
       - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.app }}:${{ steps.meta.outputs.version }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+          trivyignores: ${{ matrix.context }}/.trivyignore
+
+      - name: Trivy vulnerability scan (SARIF)
+        if: always()
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE_BASE }}/${{ matrix.app }}:${{ steps.meta.outputs.version }}
@@ -131,7 +142,6 @@ jobs:
           output: trivy-results.sarif
           severity: CRITICAL
           ignore-unfixed: true
-          exit-code: 1
           trivyignores: ${{ matrix.context }}/.trivyignore
 
       - name: Upload Trivy SARIF to GitHub Security
